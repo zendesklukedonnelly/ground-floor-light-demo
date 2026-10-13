@@ -36,6 +36,15 @@ const server = createServer(async (req, res) => {
     }
     return;
   }
+  if (req.method === 'GET' && url.pathname === '/state') {
+    res.writeHead(200, {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': 'no-store',
+      'access-control-allow-origin': '*',
+    });
+    res.end(JSON.stringify(roomState));
+    return;
+  }
   if (req.method === 'GET' && url.pathname === '/events') {
     res.writeHead(200, {
       'content-type': 'text/event-stream', 'cache-control': 'no-cache, no-transform',

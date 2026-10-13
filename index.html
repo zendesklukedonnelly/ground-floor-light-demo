@@ -53,6 +53,21 @@ if (location.protocol === 'http:' || location.protocol === 'https:') {
   events.addEventListener('command', event => {
     try { const {command} = JSON.parse(event.data); if (commands[command]) setRoom(...commands[command]); } catch {}
   });
+  // Poll as a fallback in case a live event is missed during a reconnect.
+  const syncRoomState = async () => {
+    try {
+      const response = await fetch('/state', {cache: 'no-store'});
+      if (!response.ok) return;
+      const state = await response.json();
+      for (const [serverRoom, pageRoom] of [['livingroom','living'],['kitchen','kitchen'],['bathroom','bath']]) {
+        if (typeof state[serverRoom] === 'boolean' && rooms[pageRoom].on !== state[serverRoom]) {
+          setRoom(pageRoom, state[serverRoom], false);
+        }
+      }
+    } catch {}
+  };
+  syncRoomState();
+  window.setInterval(syncRoomState, 5000);
 }
 // For embedded demos, another browser context may also issue window.postMessage('kitchenlighton','*').
 </script><!-- Start of roomlightsdemo Zendesk Widget script -->

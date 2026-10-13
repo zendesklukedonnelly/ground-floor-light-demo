@@ -7,6 +7,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 3000);
 const token = process.env.COMMAND_TOKEN || '';
 const clients = new Set();
+const roomState = { livingroom: false, kitchen: false, bathroom: false };
 const valid = new Set([
   'livingroomlighton', 'livingroomlightoff',
   'kitchenlighton', 'kitchenlightoff',
@@ -42,6 +43,11 @@ const server = createServer(async (req, res) => {
     });
     res.write('event: ready\ndata: {}\n\n');
     clients.add(res);
+    // Reconcile this page with the latest state if it connected late or reconnected.
+    for (const [room, on] of Object.entries(roomState)) {
+      const command = `${room}light${on ? 'on' : 'off'}`;
+      res.write(`event: command\ndata: ${JSON.stringify({ command })}\n\n`);
+    }
     const heartbeat = setInterval(() => res.write(': keepalive\n\n'), 20000);
     req.on('close', () => { clearInterval(heartbeat); clients.delete(res); });
     return;
@@ -70,6 +76,8 @@ const server = createServer(async (req, res) => {
         res.writeHead(400, { 'content-type': 'application/json', 'access-control-allow-origin': '*' });
         res.end(JSON.stringify({ error: 'Unknown command', accepted: [...valid] })); return;
       }
+      const [, room, state] = command.match(/^(livingroom|kitchen|bathroom)light(on|off)$/);
+      roomState[room] = state === 'on';
       const payload = `event: command\ndata: ${JSON.stringify({ command })}\n\n`;
       for (const client of clients) client.write(payload);
       res.writeHead(200, { 'content-type': 'application/json', 'access-control-allow-origin': '*' });

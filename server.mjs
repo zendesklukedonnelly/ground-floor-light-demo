@@ -8,10 +8,12 @@ const port = Number(process.env.PORT || 3000);
 const token = process.env.COMMAND_TOKEN || '';
 const clients = new Set();
 const roomState = { livingroom: false, kitchen: false, bathroom: false };
+const applianceState = { oven: false };
 const valid = new Set([
   'livingroomlighton', 'livingroomlightoff',
   'kitchenlighton', 'kitchenlightoff',
   'bathroomlighton', 'bathroomlightoff',
+  'ovenpreheaton', 'ovenpreheatoff',
 ]);
 
 const server = createServer(async (req, res) => {
@@ -42,7 +44,7 @@ const server = createServer(async (req, res) => {
       'cache-control': 'no-store',
       'access-control-allow-origin': '*',
     });
-    res.end(JSON.stringify(roomState));
+    res.end(JSON.stringify({ ...roomState, oven: applianceState.oven }));
     return;
   }
   if (req.method === 'GET' && url.pathname === '/events') {
@@ -57,6 +59,7 @@ const server = createServer(async (req, res) => {
       const command = `${room}light${on ? 'on' : 'off'}`;
       res.write(`event: command\ndata: ${JSON.stringify({ command })}\n\n`);
     }
+    res.write('event: command\ndata: {"command":"' + (applianceState.oven ? 'ovenpreheaton' : 'ovenpreheatoff') + '"}\n\n');
     const heartbeat = setInterval(() => res.write(': keepalive\n\n'), 20000);
     req.on('close', () => { clearInterval(heartbeat); clients.delete(res); });
     return;
@@ -85,8 +88,13 @@ const server = createServer(async (req, res) => {
         res.writeHead(400, { 'content-type': 'application/json', 'access-control-allow-origin': '*' });
         res.end(JSON.stringify({ error: 'Unknown command', accepted: [...valid] })); return;
       }
-      const [, room, state] = command.match(/^(livingroom|kitchen|bathroom)light(on|off)$/);
-      roomState[room] = state === 'on';
+      const roomCommand = command.match(/^(livingroom|kitchen|bathroom)light(on|off)$/);
+      if (roomCommand) {
+        const [, room, state] = roomCommand;
+        roomState[room] = state === 'on';
+      } else {
+        applianceState.oven = command === 'ovenpreheaton';
+      }
       const payload = `event: command\ndata: ${JSON.stringify({ command })}\n\n`;
       for (const client of clients) client.write(payload);
       res.writeHead(200, { 'content-type': 'application/json', 'access-control-allow-origin': '*' });

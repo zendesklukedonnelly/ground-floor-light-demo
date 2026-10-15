@@ -26,5 +26,6 @@ The bearer header is optional when `COMMAND_TOKEN` is unset (local demo mode) an
 - `livingroomlighton` / `livingroomlightoff`
 - `kitchenlighton` / `kitchenlightoff`
 - `bathroomlighton` / `bathroomlightoff`
+- `ovenpreheaton` / `ovenpreheatoff` (demo preheat indicator only)
 
-Manual switches in the page change the local view immediately. The server broadcasts accepted agent commands over Server-Sent Events to all open floor-plan pages. It does not store room state: each new page starts with all lights off. For a durable public deployment, add state persistence and configure the Zendesk agent's server-side action to call this HTTPS endpoint; keep the token out of browser code.
+Manual switches in the page change the local view immediately. The server broadcasts accepted agent commands over Server-Sent Events to all open floor-plan pages. It keeps state in memory only, so each server restart starts with all lights and the oven off. Oven commands update only the demo's visual preheat indicator; they do not control a physical oven. For a durable public deployment, add state persistence and configure the Zendesk agent's server-side action to call this HTTPS endpoint; keep the token out of browser code.
